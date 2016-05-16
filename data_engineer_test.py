@@ -47,7 +47,7 @@ def process_line(line, db_con):
     try:
         cur = db_con.cursor()
         cur.execute("INSERT INTO events VALUES (unhex(replace( %s ,'-','')), %s, %s, %s , unhex(replace( %s ,'-','')), %s);" \
-                    (fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], )) 
+                    (fields[0].replace('-',''), fields[1], fields[2], fields[3], fields[4], fields[5].replace('-',''),, fields[6].replace('/page',''),, )) 
         db_con.commit()
     
     except mdb.Error, e:
