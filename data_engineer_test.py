@@ -124,3 +124,6 @@ def main(argv):
         
         # start ETL process with connection active.
         etl(inputfile, db_con)
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
