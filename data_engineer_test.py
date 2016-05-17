@@ -16,7 +16,7 @@ def process_line(line, db_con, table):
     try:
         cur = db_con.cursor()
         cur.execute("INSERT INTO %s VALUES (%s, %s, %d, %s , %s, %s);" \
-                    (table, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5],, fields[6].replace('/page',''))) 
+                    (table, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6].replace('/page',''))) 
         db_con.commit()
     
     except mdb.Error, e:
@@ -56,7 +56,7 @@ def main(argv):
             config['user'] = arg
         elif opt in ("-p", "--password"):
             config['password'] = arg
-    
+
     db_con = mdb.connect(config['host'], config['user'], config['password'], config['database'])
     
     with db_con:
