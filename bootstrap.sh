@@ -33,6 +33,3 @@ do
     fi
 done
 
-# Executes Python script to import data into the DB
-python $SETUP_SOURCE -H $data_mysql_db_host -d $data_mysql_db_name -t $data_mysql_db_table -u $data_mysql_db_user -p $data_mysql_db_user_password
-

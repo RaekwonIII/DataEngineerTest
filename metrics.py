@@ -1,65 +1,106 @@
 #!/usr/bin/env python
 
-import sys, getopt
+from datetime import date, datetime, timedelta
+import sys, argparse, ConfigParser
 import psycopg2 as rdb
-
-help_message = 'setup.py -H <host> -P <port> -d <database> -t <table> -u <user> -p <password>'
-
 
 def main(argv):
     """
-    Parse arguments, open db connection, creates table and imports data
+    Parse arguments, open db connection
     """
-    try:
-        opts, args = getopt.getopt(argv,"hH:P:d:t:u:p:",["host=","port=","database=","table=","user=","password="])
-    except getopt.GetoptError:
-        print help_message 
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print help_message
-            sys.exit()
-        elif opt in ("-H", "--host"):
-            host = arg
-        elif opt in ("-P", "--port"):
-            port = arg
-        elif opt in ("-d", "--database"):
-            database = arg
-        elif opt in ("-t", "--table"):
-            table = arg
-        elif opt in ("-u", "--user"):
-            user = arg
-        elif opt in ("-p", "--password"):
-            password = arg
-    
+     
+    today = date.today()
     conn_string = "dbname='%s' port='%s' user='%s' password='%s' host='%s'"
-    db_con = rdb.connect(conn_string % (database, port, user, password, host))
+    
+    parser = argparse.ArgumentParser(description='Extracts daily metrics from database')
+    parser.add_argument('-d','--date', metavar='DATE', dest='date', 
+        help='Optional date, if not provided, date.today() will be used')
+    
+    args = parser.parse_args()
+   
+    if args.date != None:
+        print "Setting current date with provided argument"
+        today = datetime.strptime(args.date, "%Y-%m-%d %H:%M:%S.%f").date()
+    
+    yesterday = today - timedelta(1)    
+    
+    today_str = today.strftime("%Y-%m-%d %H:%M:%S.%f")
+    yesterday_str = yesterday.strftime("%Y-%m-%d %H:%M:%S.%f")
+    
+    Config = ConfigParser.ConfigParser()
+    Config.read("./config.ini")
+    host = Config.get("Database",'host')
+    database = Config.get("Database",'database')
+    port = Config.get("Database",'port')
+    user = Config.get("Database",'user')
+    password = Config.get("Database",'password')
+    metrics_table = Config.get("Metrics",'metrics_table')
+    active_query = Config.get("Metrics",'active_query')
+    inactive_query = Config.get("Metrics",'inactive_query')
+    churned_query = Config.get("Metrics",'churned_query')
+    reactivated_query = Config.get("Metrics",'reactivated_query') 
+    update_query = Config.get("Metrics",'update_query')
+    insert_query = Config.get("Metrics",'insert_query')
     
     try:
-        with db_con:
-            cur = db_con.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS events ( \
-                event_id VARCHAR(36) PRIMARY KEY NOT NULL, \
-                timestamp DATETIME NOT NULL,\
-                user_fingerprint bigint, \
-                domain_userid VARCHAR(16), \
-                network_userid VARCHAR(36) NOT NULL, \
-                page_id varchar(13) NOT NULL);\
-                copy events from 's3://gousto-test/events.gz' \ 
-                credentials 'aws_iam_role=arn:aws:iam::882822032425:role/goustoTest' \
-                delimiter ',' \
-                removequotes \
-                timeformat 'YYYY-MM-DD HH:MI:SS' \
-                GZIP region 'eu-west-1';")
+        db_con = rdb.connect(conn_string % (database, port, user, password, host))
+        db_con.autocommit = True
+    except:
+        print "Couldn't connect to database"
     
-    except rdb.Error, e:
-        if db_con:
-            db_con.rollback()
-        print "Error description %d: %s" % (field[0],e.args[0],e.args[1])
-        sys.exit(1)
+    cur = db_con.cursor()
+    
+    try:
+        cur.execute(active_query % (today_str, yesterday_str))
+        active_users=cur.fetchone()[0]
+        print "Found %d active users in last two days" % (active_users)
+    except:
+        print "Error querying active users"
+    
+    try:
+        cur.execute(inactive_query % (today_str, yesterday_str, yesterday_str))
+        inactive_users=cur.fetchone()[0]
+        print "Found %d inactive users in last two days" % (inactive_users)
+    except:
+        print "Error querying inactive users"
+    
+    try: 
+        cur.execute(churned_query % (yesterday_str, today_str))
+        churned_users=cur.fetchone()[0]
+        print "Found %d churned users in last two days" % (churned_users)
+    except:
+        print "Errory querying churned users"
+    
+    try: 
+        cur.execute(reactivated_query % (today_str, yesterday_str, today_str))
+        reactivated_users=cur.fetchone()[0]
+        print "Found %d reactivated users in last two days" % (reactivated_users)
+    except:
+        print "Error querying reactivated users"
+   
+    #try: 
+    #    print "Attempting update table"
+    #    cur.execute(update_query, (metrics_table, active_users, inactive_users, 
+    #        churned_users, reactivated_users, today))
+    #except:
+    #    db_con.rollback()
+    #    print "Error trying to update table"
+    #finally:
+    #    db_con.commit()
+    
+    try:    
+        print "Attempting safe insert"
+        #cur.execute(insert_query, (metrics_table, today, active_users, 
+        #    inactive_users, churned_users, reactivated_users, metrics_table, today))
+        cur.execute(insert_query, (metrics_table, today, active_users, 
+            inactive_users, churned_users, reactivated_users))
+    except:
+        db_con.rollback()
+        print "Error inserting into metrics table"
     finally:
-        if cur:
-            cur.close()
-
+        db_con.commit()
+    
+    cur.close()
+    db_con.close()
 if __name__ == "__main__":
    main(sys.argv[1:])

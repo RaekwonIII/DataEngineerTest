@@ -3,19 +3,6 @@
 import sys, ConfigParser
 import psycopg2 as rdb
 
-def ConfigSectionMap(section):
-    dict1 = {}
-    options = Config.options(section)
-    for option in options:
-        try:
-            dict1[option] = Config.get(section, option)
-            if dict1[option] == -1:
-                DebugPrint("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
-            dict1[option] = None
-    return dict1
-
 def main(argv):
     """
     Read config file, open db connection, creates table and imports data
@@ -23,11 +10,12 @@ def main(argv):
     Config = ConfigParser.ConfigParser()
     Config.read("./config.ini")
     
-    host = ConfigSectionMap("Database")['host']
-    database = ConfigSectionMap("Database")['database']
-    port = ConfigSectionMap("Database")['port']
-    user = ConfigSectionMap("Database")['user']
-    password = ConfigSectionMap("Database")['password']
+    host = Config.get("Database",'host')
+    database = Config.get("Database",'database')
+    port = Config.getint("Database",'port')
+    user = Config.get("Database",'user')
+    password = Config.get("Database",'password')
+    metrics_table = Config.get("Metrics",'metrics_table')
     
     conn_string = "dbname='%s' port='%s' user='%s' password='%s' host='%s'"
     db_con = rdb.connect(conn_string % (database, port, user, password, host))
@@ -35,19 +23,25 @@ def main(argv):
     try:
         with db_con:
             cur = db_con.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS events ( \
-                event_id VARCHAR(36) PRIMARY KEY NOT NULL, \
-                timestamp DATETIME NOT NULL,\
-                user_fingerprint bigint, \
-                domain_userid VARCHAR(16), \
-                network_userid VARCHAR(36) NOT NULL, \
-                page_id varchar(13) NOT NULL);\
-                copy events from 's3://gousto-test/events.gz' \ 
-                credentials 'aws_iam_role=arn:aws:iam::882822032425:role/goustoTest' \
-                delimiter ',' \
-                removequotes \
-                timeformat 'YYYY-MM-DD HH:MI:SS' \
-                GZIP region 'eu-west-1';")
+            cur.execute("""CREATE TABLE IF NOT EXISTS events ( 
+                event_id VARCHAR(36) PRIMARY KEY NOT NULL, 
+                timestamp DATETIME NOT NULL, 
+                user_fingerprint BIGINT, 
+                domain_userid VARCHAR(16), 
+                network_userid VARCHAR(36) NOT NULL, 
+                page_id varchar(13) NOT NULL); 
+                COPY events FROM 's3://gousto-test/events.gz' 
+                credentials 'aws_iam_role=arn:aws:iam::882822032425:role/goustoTest' 
+                delimiter ',' 
+                removequotes 
+                timeformat 'YYYY-MM-DD HH:MI:SS' 
+                GZIP region 'eu-west-1';""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS %s ( 
+                date DATE PRIMARY KEY NOT NULL, 
+                active BIGINT, 
+                inactive BIGINT, 
+                churned BIGINT, 
+                reactivated BIGINT);""" % (metrics_table))
     
     except rdb.Error, e:
         if db_con:
