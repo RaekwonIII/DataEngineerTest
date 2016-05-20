@@ -1,28 +1,5 @@
 #!/bin/sh
 
-echo "Creating database $data_mysql_db_name, if not exists"
-# Creates database if necessary
-mysql -u root -p$data_mysql_root_password -e \
-    "CREATE DATABASE IF NOT EXISTS $data_mysql_db_name;"
-
-echo "Granting user $data_mysql_db_user permissions on database"
-# Grants user permissions (creates it and sets password if not set yet)
-mysql -u root -p$data_mysql_root_password -e \
-    "GRANT ALL PRIVILEGES ON $data_mysql_db_name.* TO \
-    '$data_mysql_db_user'@'$data_mysql_db_host' IDENTIFIED BY '$data_mysql_db_user_password';"
-
-echo "Dropping table $data_mysql_db_table and creating a new one in database $data_mysql_db_name"
-# Creates table if necessary
-mysql -u $data_mysql_db_user -p$data_mysql_db_user_password -e \
-    "USE $data_mysql_db_name; \
-    DROP TABLE $data_mysql_db_table;
-    CREATE TABLE $data_mysql_db_table(event_id VARCHAR(36) PRIMARY KEY NOT NULL, \
-    timestamp DATETIME NOT NULL, \
-    user_fingerprint INT UNSIGNED NOT NULL, \
-    domain_userid VARCHAR(16) NOT NULL, \
-    network_userid VARCHAR(36) NOT NULL, \
-    page_id INT UNSIGNED NOT NULL);"
-
 echo "Checking if virtual environment is present"
 # Check if virtual environment already present, if not creates it
 if [ ! -d "etl_env" ]; then
@@ -32,11 +9,11 @@ fi
 
 echo "Activating virtual environment"
 # Activates virtual environment
-. ./etl_env/bin/activate
+. ./env_etl/bin/activate
 
 # Checks if dependencies are satisfied
 echo "Checking dependencies with pip"
-pip install --upgrade MySQL-python 
+pip install --upgrade psycopg2
 status=$?
 
 if test $status -eq 0
@@ -46,4 +23,16 @@ else
     echo "PIP failed to install all packages."
     exit $status
 fi
+
+
+# Sets python script executable, if not already
+for f in $(ls *{py,sh})
+do 
+    if [[ ! -x $f ]]; then
+        chmod +x $f
+    fi
+done
+
+# Executes Python script to import data into the DB
+python $SETUP_SOURCE -H $data_mysql_db_host -d $data_mysql_db_name -t $data_mysql_db_table -u $data_mysql_db_user -p $data_mysql_db_user_password
 
