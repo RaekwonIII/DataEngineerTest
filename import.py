@@ -1,52 +1,51 @@
 #!/usr/bin/env python
 
-import sys, ConfigParser
-import psycopg2
+import sys, ConfigParser, psycopg2, logging
 
 def main():
     """
     Read config file, open db connection, creates table and imports data
     """
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',filename='import.log', level=logging.INFO)
+    
     Config = ConfigParser.ConfigParser()
     Config.read("./config.ini")
-    
+
+    logging.info("Reading config file...")
+
+    conn_string = Config.get("Database",'conn_string')
     host = Config.get("Database",'host')
     database = Config.get("Database",'database')
     port = Config.getint("Database",'port')
     user = Config.get("Database",'user')
     password = Config.get("Database",'password')
+    conn_string = Config.get("Database",'conn_string')
+    compressed_dataset_s3 = Config.get("Import",'compressed_dataset_s3')
+    create_events_query = Config.get("Import",'create_events_query')
+    import_query = Config.get("Import",'import_query')
     metrics_table = Config.get("Metrics",'metrics_table')
-    
-    conn_string = "dbname='%s' port='%s' user='%s' password='%s' host='%s'"
+    create_metrics_query = Config.get("Metrics",'create_metrics_query')
+
+    logging.info("Configuration complete")
+
     conn = psycopg2.connect(conn_string % (database, port, user, password, host))
+
+    logging.info("Opened connection with DB")
     
     try:
         with conn:
             cur = conn.cursor()
-            cur.execute("""CREATE TABLE IF NOT EXISTS events ( 
-                event_id VARCHAR(36) PRIMARY KEY NOT NULL, 
-                timestamp DATETIME NOT NULL, 
-                user_fingerprint BIGINT, 
-                domain_userid VARCHAR(16), 
-                network_userid VARCHAR(36) NOT NULL, 
-                page_id varchar(13) NOT NULL); 
-                COPY events FROM 's3://gousto-test/events.gz' 
-                credentials 'aws_iam_role=arn:aws:iam::882822032425:role/goustoTest' 
-                delimiter ',' 
-                removequotes 
-                timeformat 'YYYY-MM-DD HH:MI:SS' 
-                GZIP region 'eu-west-1';""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS %s ( 
-                date DATE PRIMARY KEY NOT NULL, 
-                active BIGINT, 
-                inactive BIGINT, 
-                churned BIGINT, 
-                reactivated BIGINT);""" % (metrics_table))
+            logging.info("Creating events table")
+            cur.execute(create_events_query)
+            logging.info("Importing data from file")
+            cur.execute(import_query % (compressed_dataset_s3))
+            logging.info("Creting metrics_table")
+            cur.execute(create_metrics_query % (metrics_table))
     
-    except rdb.Error, e:
+    except psycopg2.Error, e:
         if conn:
             conn.rollback()
-        print "Error description %d: %s" % (e.args[0],e.args[1])
+        logging.error("Error description: %s" % (e.pgerror))
         sys.exit(1)
     finally:
         if cur:
