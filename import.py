@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import sys, ConfigParser
-import psycopg2 as rdb
+import psycopg2
 
-def main(argv):
+def main():
     """
     Read config file, open db connection, creates table and imports data
     """
@@ -18,11 +18,11 @@ def main(argv):
     metrics_table = Config.get("Metrics",'metrics_table')
     
     conn_string = "dbname='%s' port='%s' user='%s' password='%s' host='%s'"
-    db_con = rdb.connect(conn_string % (database, port, user, password, host))
+    conn = psycopg2.connect(conn_string % (database, port, user, password, host))
     
     try:
-        with db_con:
-            cur = db_con.cursor()
+        with conn:
+            cur = conn.cursor()
             cur.execute("""CREATE TABLE IF NOT EXISTS events ( 
                 event_id VARCHAR(36) PRIMARY KEY NOT NULL, 
                 timestamp DATETIME NOT NULL, 
@@ -44,13 +44,13 @@ def main(argv):
                 reactivated BIGINT);""" % (metrics_table))
     
     except rdb.Error, e:
-        if db_con:
-            db_con.rollback()
-        print "Error description %d: %s" % (field[0],e.args[0],e.args[1])
+        if conn:
+            conn.rollback()
+        print "Error description %d: %s" % (e.args[0],e.args[1])
         sys.exit(1)
     finally:
         if cur:
             cur.close()
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+   main()

@@ -1,15 +1,24 @@
-Pre-requisites:
-
+# Pre-requisites:
 This software uses python 2.7.
-Packages for python, python-def, postgre-sql-dev, pip and virtualenv have tobe installed in the system.
+Packages for python, python-dev, postgre-sql-dev, pip and virtualenv have tobe installed in the system.
 
-Configuration for databse has to be set into 'config.ini'
+# To perform a test against sample data
+* Launch 'bootstrap.sh' to setup the virtual environment, activate it, check that necessary Python packages are installed, and set script files as executable.
+* Change configuration in config.ini, this file includes config for
+ - database connection details
+ - table names
+ - query templates
+* Launch 'import.py' to setup sample data in the database.
+* Launch 'test.py' to run metrics for each day in the sample data set
 
-Launch 'bootstrap.sh' to setup the virtual environment, activate it, check that necessary 
-Python packages are installed, and set script files as executable
+### Extras
+* 'metrics.py' accepts a date string as argument 'python metrics.py -d '2014-09-02'' which can be use in case of failure.
+* 'metrics.sh' is a wrapper for it's namesake python counterpart and is designed to be used for scheduling the ETL process
+ - It invokes 'bootstrap.sh' to make sure virtual environment is active
+ - The suggestion would be to execute this '(crontab -l ; echo "0 3 * * * /path/to/metrics.sh") | sort - | uniq - | crontab -' to launch this script after midnight
+ - It uses yesterday's date to run the python script, so should be scheduled after midnight.
 
-Launch 'import.py' to setup sample data in the database.
 
-Launch 'metrics.sh' to extract metrics. This is a wrapper to 'metrics.py', and it calls 'bootstrap.sh' to 
-make sure program is running in virtual environment.
+
+
 

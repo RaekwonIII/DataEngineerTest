@@ -12,7 +12,7 @@ number of reactivated users (users who visited our website on day X, but didn't 
 
 Data
 
-The data to be used for this test is available at NOT_AVAIL. It contains about 1.5 million events and for this test we included page-views only. Each event (record) has the following attributes: event_id, timestamp, user_fingerprint, domain_userid, network_userid, page.
+The data to be used for this test is available at https://s3-eu-west-1-gousto-test/events.gz. It contains about 1.5 million events and for this test we included page-views only. Each event (record) has the following attributes: event_id, timestamp, user_fingerprint, domain_userid, network_userid, page.
 
 Requirements
 
