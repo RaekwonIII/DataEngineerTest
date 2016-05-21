@@ -1,5 +1,6 @@
-# Pre-requisites:
-This software uses python 2.7. A Linux environment is needed to execute bash scripts.
+# Pre-requisites
+This software uses python 2.7 and runs against a PosgreSQL database.
+A Linux environment is needed to execute bash scripts.
 Packages for `python`, `python-dev`, `postgre-sql-dev`, `pip` and `virtualenv` have tobe installed in the system.
 
 # To perform a test against sample data
