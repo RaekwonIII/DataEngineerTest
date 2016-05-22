@@ -10,8 +10,8 @@ Packages for `python`, `python-dev`, `postgre-sql-dev`, `pip` and `virtualenv` h
  - database connection details
  - table names
  - query templates
-* Launch `python import.py` to setup sample data in the database.
-* Launch `python test.py` to run metrics for each day in the sample data set
+* Launch `python import.py` to setup sample data in the database. The module logs information and errors to `import.log`
+* Launch `python test.py` to run metrics for each day in the sample data set.  The `metrigs.py` module logs information and errors to `metrics.log`.
 
 ### Extras
 * `metrics.py` is designed to accept an optional date string as argument (`python metrics.py -d '2014-09-02'`) which can be use in case of failure of batch process.
