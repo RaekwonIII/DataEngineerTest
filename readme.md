@@ -3,7 +3,7 @@ This software uses python 2.7 and runs against a PosgreSQL database.
 A Linux environment is needed to execute bash scripts.
 Packages for `python`, `python-dev`, `postgre-sql-dev`, `pip` and `virtualenv` have tobe installed in the system.
 
-# To perform a test against sample data
+### To perform a test against sample data
 * In a terminal, `cd` into the project directory
 * Execute `./bootstrap.sh` to setup the virtual environment, activate it, check that necessary Python packages are installed, and set script files as executable.
 * Change configuration in `config.ini`, this file includes config for:
@@ -11,7 +11,7 @@ Packages for `python`, `python-dev`, `postgre-sql-dev`, `pip` and `virtualenv` h
  - table names
  - query templates
 * Launch `python import.py` to setup sample data in the database. The module logs information and errors to `import.log`
-* Launch `python test.py` to run metrics for each day in the sample data set.  The `metrigs.py` module logs information and errors to `metrics.log`.
+* Launch `python test.py` to run metrics for each day in the sample data set.  The `metrics.py` module logs information and errors to `metrics.log`.
 
 ### Extras
 * `metrics.py` is designed to accept an optional date string as argument (`python metrics.py -d '2014-09-02'`) which can be use in case of failure of batch process.
